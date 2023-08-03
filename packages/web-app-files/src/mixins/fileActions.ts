@@ -178,13 +178,13 @@ export default {
         // in case popup is blocked win will be null
         if (win) {
           win.focus()
-        } else {      
+        } else {
             this.showMessage({
               title: this.$gettext('Blocked pop-ups and redirects'),
               timeout: 10,
               status: 'warning',
               desc: this.$gettext('Some features might not work correctly. Please enable pop-ups and redirects in Settings > Privacy & Security > Site Settings > Permissions')
-            })       
+            })
         }
         return
       }
@@ -267,7 +267,8 @@ export default {
       }
 
       const resource = options.resources[0]
-      const { mimeType, webDavPath, fileId } = resource
+      const { webDavPath, fileId } = resource
+      const mimeType = resource.isFolder ? "httpd/unix-directory" : resource.mimeType
       const driveAliasAndItem = options.space.getDriveAliasAndItem(resource)
       const mimeTypes = this.$store.getters['External/mimeTypes'] || []
       if (
@@ -330,13 +331,13 @@ export default {
       // TODO: Let users configure whether to open in same/new tab (`_blank` vs `_self`)
       const win =  window.open(this.$router.resolve(routeOpts).href, sameTab ? '_self' : '_blank')
 
-      if (!win) {   
+      if (!win) {
           this.showMessage({
             title: this.$gettext('Blocked pop-ups and redirects'),
             timeout: 10,
             status: 'warning',
             desc: this.$gettext('Some features might not work correctly. Please enable pop-ups and redirects in Settings > Privacy & Security > Site Settings > Permissions')
-          })       
+          })
       }
     }
   }
