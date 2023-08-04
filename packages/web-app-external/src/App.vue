@@ -5,6 +5,34 @@
       'oc-flex oc-flex-center oc-flex-middle': loading || loadingError
     }"
   >
+    <oc-modal
+      v-if="modal"
+      :icon="'alarm-warning'"
+      :title="'Microsoft debug'"
+      :button-cancel-text="'Cancel'"
+      :button-confirm-text="'Force reload'"
+      @cancel="
+        () => {
+          modal = false
+        }
+      "
+      @confirm="
+        () => {
+          debugMicrosoft = true
+          modal = false
+        }
+      "
+    >
+      <template #content>
+        <p>If you are facing problems with editing the document, please force reload</p>
+        <p>
+          OTG:
+          <a href="https://cern.service-now.com/service-portal?id=outage&n=OTG0074523"
+            >OTG0074523</a
+          >
+        </p>
+      </template>
+    </oc-modal>
     <h1 class="oc-invisible-sr" v-text="pageTitle" />
     <loading-screen v-if="loading" />
     <error-screen v-else-if="loadingError" :message="errorMessage" />
@@ -70,9 +98,15 @@ export default defineComponent({
     appUrl: '',
     method: '',
     formParameters: {},
+    debugMicrosoft: false,
+    modal: false,
     viewmodeWrite: false,
+    fileName: undefined,
+    writePermissions: false,
     fileInfo: {},
-    reloadWithwriteOnEdit: undefined
+    func: undefined,
+    func2: undefined,
+    events: []
   }),
   computed: {
     ...mapGetters(['capabilities']),
@@ -93,19 +127,68 @@ export default defineComponent({
       return this.$route.query.fileId
     }
   },
+  watch: {
+    debugMicrosoft(n, o) {
+      if (n === true) {
+        this.onCreate(true)
+      }
+    }
+  },
   async created() {
     await this.onCreate(false)
   },
   methods: {
+    ...mapActions(['createModal', 'hideModal']),
+    catchMicrosoftError() {
+      this.events = []
+      if (!this.func)
+        this.func = (event) => {
+          this.events.push(JSON.parse(event.data))
+        }
+      window.removeEventListener('message', this.func)
+      if (
+        window.location.href.includes('app=MS') &&
+        this.writePermissions &&
+        !this.debugMicrosoft
+      ) {
+        const timeInterval =
+          (this.fileName && this.fileName.endsWith('.ppt')) ||
+          this.fileName.endsWith('.pptx') ||
+          this.fileName.endsWith('.odp')
+            ? 13 * 1000
+            : 7 * 1000
+        window.addEventListener('message', this.func)
+
+        setTimeout(() => {
+          if (
+            !this.events.some((e) => {
+              return e.MessageId === 'App_LoadingStatus'
+            })
+          ) {
+            this.modal = true
+            setTimeout(() => {
+              if (
+                this.events.some((e) => {
+                  return e.MessageId === 'App_LoadingStatus'
+                })
+              )
+                this.modal = false
+              window.removeEventListener('message', this.func)
+            }, timeInterval)
+          }
+        }, timeInterval)
+      }
+    },
     async catchClickMicrosoftEdit() {
-      if (!this.reloadWithwriteOnEdit)
-        this.reloadWithwriteOnEdit = async (event) => {
+      if (!this.func2)
+        this.func2 = async (event) => {
           if (JSON.parse(event.data).MessageId === 'UI_Edit') {
             await this.onCreate(true)
+            this.catchMicrosoftError()
           }
         }
-      window.removeEventListener('message', this.reloadWithwriteOnEdit)
-      window.addEventListener('message', await this.reloadWithwriteOnEdit)
+      window.removeEventListener('message', this.func2)
+      window.addEventListener('message', await this.func2)
     },
     async onCreate(editMode) {
       this.loading = true
@@ -115,6 +198,8 @@ export default defineComponent({
             davProperties: [DavProperty.FileId, DavProperty.Permissions, DavProperty.Name]
           })
         const fileId = this.fileId || this.fileInfo.fileId
+        this.fileName = this.fileInfo.name
+        this.writePermissions = this.fileInfo.permissions.includes('W')
 
         // fetch iframe params for app and file
         const baseUrl = urlJoin(
@@ -133,7 +218,8 @@ export default defineComponent({
           file_id: fileId,
           lang: this.$language.current,
           ...(this.applicationName && { app_name: this.applicationName }),
-          ...(viewMode && { view_mode: viewMode })
+          ...(this.debugMicrosoft && { forcelock: 1 }),
+          ...(viewMode && { view_mode: viewMode }),
         })
         const url = `${baseUrl}?${query}`
         const response = await this.makeRequest('POST', url, {
@@ -148,7 +234,7 @@ export default defineComponent({
               )
               break
             case 403:
-              if(this.applicationName == "Overleaf"){
+            if(this.applicationName == "Overleaf"){
                 // Extracting time from error message and converting it to local time to a readable format from unix format
                 const startTime = "Project was already exported on:"
                 const unixTime = response.data?.message.slice(response.data?.message.indexOf(startTime) + startTime.length);
@@ -192,27 +278,8 @@ export default defineComponent({
           return
         }
 
-        if (!response.data.app_url || !response.data.method) {
-          this.errorMessage = this.$gettext('Error in app server response')
-          this.loading = false
-          this.loadingError = true
-          console.error('Error in app server response')
-          return
-        }
+        this.handleResponse(response, editMode)
 
-        this.appUrl = response.data.app_url
-        this.method = response.data.method
-        if (response.data.form_parameters) {
-          this.formParameters = response.data.form_parameters
-        }
-
-        if (this.method === 'POST' && this.formParameters) {
-          this.$nextTick(() => this.$refs.subm.click())
-        }
-        this.loading = false
-        if (window.location.href.includes('app=MS')) {
-          await this.catchClickMicrosoftEdit()
-        }
       } catch (error) {
         this.errorMessage = this.$gettext('Error retrieving file information')
         console.error('Error retrieving file information', error)
@@ -222,7 +289,7 @@ export default defineComponent({
     },
 
     async handleResponse(response, editMode) {
-      if (!response.data.app_url || !response.data.method || !response.data.target) {
+      if (!response.data.app_url || !response.data.method) {
         this.errorMessage = this.$gettext('Error in app server response')
         this.loading = false
         this.loadingError = true
@@ -231,7 +298,7 @@ export default defineComponent({
       }
 
       switch (response.data.target) {
-        case 1:
+        case "iframe":
           // Target is an iframe
           this.appUrl = response.data.app_url
           this.method = response.data.method
@@ -258,7 +325,7 @@ export default defineComponent({
             }
           }
           break
-        case 2:
+        case "blank":
           // Target is none (open in new tab)
           const win = window.open(response.data.app_url, '_self')
           if (!win) {
@@ -281,6 +348,7 @@ export default defineComponent({
 
     async retryQuery(editMode, url) {
       this.hideModal()
+      this.loading = true
 
       const additional_params = stringify({
         override: "true"
@@ -311,6 +379,7 @@ export default defineComponent({
 
       this.handleResponse(response, editMode)
     }
+
   }
 })
 </script>
