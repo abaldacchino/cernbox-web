@@ -65,7 +65,7 @@ export default {
       })
       const res = await response.json()
 
-      if (res.app_url) {
+      if (res.app_url && response.ok) {
         const win = window.open(res.app_url, '_blank')
         // in case popup is blocked win will be null
         if (win) {
@@ -142,7 +142,7 @@ export default {
 
       const res = await response.json()
 
-      if (res.app_url) {
+      if (res.app_url && response.ok) {
         const win = window.open(res.app_url, '_blank')
         // in case popup is blocked win will be null
         if (win) {
