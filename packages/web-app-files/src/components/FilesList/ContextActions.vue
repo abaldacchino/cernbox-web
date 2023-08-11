@@ -8,6 +8,7 @@ import ContextActionMenu from 'web-pkg/src/components/ContextActions/ContextActi
 import FileActions from '../../mixins/fileActions'
 import CreateQuicklink from '../../mixins/actions/createQuicklink'
 import EmptyTrashBin from '../../mixins/actions/emptyTrashBin'
+import ExportOverleaf from '../../mixins/actions/exportOverleaf'
 import Paste from '../../mixins/actions/paste'
 import ShowActions from '../../mixins/actions/showActions'
 import ShowDetails from '../../mixins/actions/showDetails'
@@ -34,7 +35,8 @@ export default {
     ShowShares,
     SetSpaceImage,
     SetSpaceReadme,
-    SpaceNavigate
+    SpaceNavigate,
+    ExportOverleaf
   ],
 
   props: {
@@ -136,6 +138,7 @@ export default {
 
     menuItemsActions() {
       return [
+        ...this.$_exportToOverleaf,
         ...this.$_downloadArchive_items,
         ...this.$_downloadFile_items,
         ...this.$_delete_items,
