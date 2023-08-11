@@ -147,41 +147,6 @@ export default defineComponent({
                 'This file is currently being processed and is not yet available for use. Please try again shortly.'
               )
               break
-            case 403:
-              if(this.applicationName == "Overleaf"){
-                // Extracting time from error message and converting it to local time to a readable format from unix format
-                const startTime = "Project was already exported on:"
-                const unixTime = response.data?.message.slice(response.data?.message.indexOf(startTime) + startTime.length);
-                const date = new Date(unixTime * 1000)
-
-                const readableDate = date.getFullYear() +
-                    '-' +
-                    String(date.getMonth() + 1).padStart(2, '0') +
-                    '-' +
-                    String(date.getDate()).padStart(2, '0') +
-                    ' at ' +
-                    String(date.getHours()).padStart(2, '0') +
-                    ":" +
-                    String(date.getMinutes()).padStart(2, '0')
-
-                const modal = {
-                  variation: 'warning',
-                  title: this.$gettext('Project was already exported on') + " " + readableDate + ".",
-                  cancelText: this.$gettext('Cancel'),
-                  confirmText: this.$gettext('Export'),
-                  message: this.$gettext('Would you like to export this project again? This will create a new Overleaf project.'),
-                  hasInput: false,
-                  onCancel: this.hideModal,
-                  onConfirm: (e = editMode, u = url) => this.retryQuery(e, u),
-                }
-
-                this.createModal(modal)
-                this.errorMessage = this.$gettext(
-                  'This project has already been uploaded to Overleaf.'
-                )
-                break
-              }
-              // Otherwise we can keep default error message
             default:
               this.errorMessage = response.data?.message
           }
@@ -219,97 +184,6 @@ export default defineComponent({
         this.loading = false
         this.loadingError = true
       }
-    },
-
-    async handleResponse(response, editMode) {
-      if (!response.data.app_url || !response.data.method || !response.data.target) {
-        this.errorMessage = this.$gettext('Error in app server response')
-        this.loading = false
-        this.loadingError = true
-        console.error('Error in app server response')
-        return
-      }
-
-      switch (response.data.target) {
-        case 1:
-          // Target is an iframe
-          this.appUrl = response.data.app_url
-          this.method = response.data.method
-          if (response.data.form_parameters) {
-            this.formParameters = response.data.form_parameters
-          }
-
-          if (this.method === 'POST' && this.formParameters) {
-            this.$nextTick(() => this.$refs.subm.click())
-          }
-          this.loading = false
-          if (window.location.href.includes('app=MS')) {
-            // if not file owner, wait for clicking "Edit" button in MS
-            if (
-              this.fileInfo.isReceivedShare() ||
-              window.location.pathname.startsWith('/external/public/')
-            ) {
-              await this.catchClickMicrosoftEdit()
-            }
-            // if file owner, wait for success loading event and also wait for clicking "Edit"
-            else {
-              this.catchMicrosoftError()
-              await this.catchClickMicrosoftEdit()
-            }
-          }
-          break
-        case 2:
-          // Target is none (open in new tab)
-          const win = window.open(response.data.app_url, '_self')
-          if (!win) {
-            this.showMessage({
-              title: this.$gettext('Blocked pop-ups and redirects'),
-              timeout: 10,
-              status: 'warning',
-              desc: this.$gettext('Some features might not work correctly. Please enable pop-ups and redirects in Settings > Privacy & Security > Site Settings > Permissions')
-            })
-          }
-          break
-        default:
-          // undefined target
-          this.errorMessage = this.$gettext('Error in app server response')
-          this.loading = false
-          this.loadingError = true
-          console.error('Error in app server response: invalid target')
-      }
-    },
-
-    async retryQuery(editMode, url) {
-      this.hideModal()
-
-      const additional_params = stringify({
-        override: "true"
-      })
-
-      const retry_url = `${url}&${additional_params}`
-      const response = await this.makeRequest('POST', retry_url, {
-        validateStatus: () => true
-      })
-
-      // In case of another error, display error message and quit. We only try to handle duplicates once
-      if (response.status !== 200) {
-        switch (response.status) {
-          case 425:
-            this.errorMessage = this.$gettext(
-              'This file is currently being processed and is not yet available for use. Please try again shortly.'
-            )
-            break
-          default:
-            this.errorMessage = response.data?.message
-        }
-
-        this.loading = false
-        this.loadingError = true
-        console.error('Error fetching app information', response.status, response.data.message)
-        return
-      }
-
-      this.handleResponse(response, editMode)
     }
   }
 })

@@ -1,6 +1,6 @@
 {
-  "server": "https://cbox-ocisdev-adriana-live.cern.ch",
-  "theme": "https://cbox-ocisdev-adriana-live.cern.ch/cernbox/theme-cernbox/theme.json",
+  "server": "https://host.docker.internal:9201",
+  "theme": "https://host.docker.internal:9201/themes/owncloud/theme.json",
   "openIdConnect": {
     "metadata_url": "https://host.docker.internal:9200/.well-known/openid-configuration",
     "authority": "https://host.docker.internal:9200",
@@ -10,111 +10,22 @@
   },
   "apps": ["files", "text-editor", "pdf-viewer", "search", "external", "admin-settings"],
   "options": {
-    "contextHelpers": true,
-    "enableAdvancedTable": true,
-    "runningOnEos": true,
-    "cernFeatures": true,
-    "hoverableQuickActions": true,
-    "disableFeedbackLink": true,
-    "homeFolder": "/eos/user/{{substr 0 1 .Id}}/{{.Id}}",
     "previewFileMimeTypes": [
       "image/gif",
       "image/png",
-      "image/jpeg"
-    ],
-    "openAppsInTab": true,
-    "editor": {
-      "autosaveEnabled": true,
-      "autosaveInterval": 120
-    },
-    "breadcrumbItemMaxLength": 30,
-    "routing": {
-      "idBased": false
-    },
-    "upload": {
-      "xhr": {
-        "timeout": 3600000
-      }
-    },
-    "tours": [
-      "https://qa.cernbox.cern.ch/cernbox/tours-cernbox-0.0.8/new_features.json"
+      "image/jpeg",
+      "text/plain",
+      "image/tiff",
+      "image/bmp",
+      "image/x-ms-bmp"
     ]
   },
-  "apps": [
-    "files",
-    "search",
-    "preview",
-    "external",
-    "pdf-viewer"
-  ],
   "external_apps": [
     {
-      "id": "open-in-swan",
-      "path": "/cernbox/open-in-swan-2.0.0/main.js"
-    },
-    {
-      "id": "jupyter",
-      "path": "/cernbox/jupyter-2.0.0/main.js"
-    },
-    {
-      "id": "rootjs",
-      "path": "/cernbox/rootjs-2.0.0/main.js"
-    },
-    {
-      "id": "ifc-js",
-      "path": "/cernbox/ifc-js-2.0.2/main.js"
-    },
-    {
-      "id": "old-web-redirector",
-      "path": "/cernbox/old-web-redirector-1.0.0/main.js"
-    },
-    {
-      "id": "tours",
-      "path": "/cernbox/tours-1.0.0/main.js"
-    },
-    {
-      "id": "top-bar",
-      "path": "/cernbox/top-bar-1.0.0/main.js"
-    },
-    {
-      "id": "draw-io",
-      "path": "web-app-draw-io",
+      "id": "preview",
+      "path": "web-app-preview",
       "config": {
-        "url": "https://drawio.web.cern.ch",
-        "autosave": true,
-        "theme": "minimal"
-      }
-    },
-    {
-      "id": "text-editor",
-      "path": "web-app-text-editor",
-      "config": {
-        "primaryExtensions": [
-          "txt"
-        ],
-        "extraExtensions": [
-          "htm",
-          "html",
-          "css",
-          "js",
-          "ts",
-          "php",
-          "yml",
-          "toml",
-          "qml",
-          "pl",
-          "pm",
-          "sh",
-          "tcsh",
-          "zsh",
-          "conf",
-          "ini",
-          "inf",
-          "make",
-          "cmake",
-          "mk",
-          "in"
-        ]
+        "mimeTypes": ["image/tiff", "image/bmp", "image/x-ms-bmp"]
       }
     }
   ]
