@@ -268,7 +268,7 @@ export default {
 
       const resource = options.resources[0]
       const { webDavPath, fileId } = resource
-      const { mimeType } = resource.isFolder ? { mimeType: "httpd/unix-directory" } : resource
+      const mimeType = resource.isFolder ? "httpd/unix-directory" : resource.mimeType
       const driveAliasAndItem = options.space.getDriveAliasAndItem(resource)
       const mimeTypes = this.$store.getters['External/mimeTypes'] || []
       if (
@@ -287,7 +287,7 @@ export default {
         filteredMimeTypes
 
       return appProviders.map((app) => {
-        const label = this.$gettext('%{ action } %{ appName }')
+        const label = this.$gettext('Open in %{ appName }')
         return {
           name: app.name,
           icon: app.icon,
@@ -305,7 +305,7 @@ export default {
               options.space.shareId,
               options.sameTab
             ),
-          label: () => this.$gettextInterpolate(label, { appName: app.name, action: app.action == undefined ? "Open in" : app.action })
+          label: () => this.$gettextInterpolate(label, { appName: app.name })
         }
       })
     },
