@@ -1,6 +1,7 @@
-import { isLocationSharesActive, isLocationSpacesActive } from '../../router'
+import { isLocationTrashActive } from '../../router'
 import isFilesAppActive from './helpers/isFilesAppActive'
 import isSearchActive from '../helpers/isSearchActive'
+import { isSameResource } from '../../helpers/resource'
 import { mapActions } from 'vuex'
 import { urlJoin } from 'web-client/src/utils'
 import { stringify } from 'qs'
@@ -19,6 +20,14 @@ export default {
             return this.$gettext('Export to Overleaf')
           },
           isEnabled: ({ resources }) => {
+            if (isLocationTrashActive(this.$router, 'files-trash-generic')) {
+              return false
+            }
+
+            if (this.currentFolder !== null && isSameResource(resources[0], this.currentFolder)) {
+              return false
+            }
+
             if (
               resources.length === 1 &&
               (resources[0].isFolder === true ||

@@ -1,6 +1,8 @@
-import { isLocationSharesActive, isLocationSpacesActive } from '../../router'
+import { isLocationTrashActive, isLocationSharesActive } from '../../router'
+import { ShareStatus } from 'web-client/src/helpers/share'
 import isFilesAppActive from './helpers/isFilesAppActive'
 import isSearchActive from '../helpers/isSearchActive'
+import { isSameResource } from '../../helpers/resource'
 import { mapActions } from 'vuex'
 import { urlJoin } from 'web-client/src/utils'
 import { stringify } from 'qs'
@@ -16,12 +18,28 @@ export default {
           icon: 'overleaf',
           handler: this.$_importFromOverleaf_trigger,
           label: () => {
-            return this.$gettext('Import from Overleaf')
+            return this.$gettext('Re-import from Overleaf')
           },
           isEnabled: ({ resources }) => {
+            if (isLocationTrashActive(this.$router, 'files-trash-generic')) {
+              return false
+            }
+
+            if (this.currentFolder !== null && isSameResource(resources[0], this.currentFolder)) {
+              return false
+            }
+
+            if (
+              isLocationSharesActive(this.$router, 'files-shares-with-me') &&
+              resources[0].status === ShareStatus.declined
+            ) {
+              return false
+            }
+
             if (
               resources.length === 1 &&
-              resources[0].isFolder === true
+              (resources[0].isFolder === true ||
+                resources[0].mimeType == "application/x-tex")
             ) {
               return true
             }
@@ -47,15 +65,15 @@ export default {
         title: "Import from Overleaf",
         cancelText: this.$gettext('Cancel'),
         confirmText: this.$gettext('Overwrite Project'),
-        message: this.$gettext('Importing this project back from Overleaf will overwrite the current contents of this folder. Would you still like to proceed?'),
+        message: this.$gettext('Importing this project back from Overleaf will overwrite the contents of this resource. Would you still like to proceed?'),
         hasInput: false,
         onCancel: this.hideModal,
-        onConfirm: () => this.makeRequest(resource),
+        onConfirm: () => this.makeRequest(resource, false),
       }
       this.createModal(modal)
     },
 
-    async makeRequest (resource) {
+    async makeRequest (resource, forceImport) {
       this.hideModal()
 
       const baseUrl = urlJoin(
@@ -70,7 +88,8 @@ export default {
 
       const query = stringify({
         path: resource.path,
-        lang: this.$language.current
+        lang: this.$language.current,
+        ...(forceImport==true && { force_import: forceImport })
       })
       const url = `${baseUrl}?${query}`
 
@@ -88,18 +107,31 @@ export default {
         })
       } else {
         const res = await response.json()
+        if (res.message == "Multiple files detected in project when importing into a single file") {
+          const modal = {
+            variation: 'warning',
+            title: "Import from Overleaf",
+            cancelText: this.$gettext('Cancel'),
+            confirmText: this.$gettext('Import to current folder'),
+            message: this.$gettext('Mutliple files detected in project folder. Would you like to import them in this directory?'),
+            hasInput: false,
+            onCancel: this.hideModal,
+            onConfirm: () => this.makeRequest(resource, true),
+          }
+          this.createModal(modal)
+        } else {
+          var error_message = "An error occured when trying to import the project"
+          if (res.message != ""){
+            error_message = res.message
+          }
 
-        var error_message = "An error occured when trying to import the project"
-        if (res.message != ""){
-          error_message = res.message
+          this.showMessage({
+            title: this.$gettext('Error importing project from Overleaf'),
+            timeout: 10,
+            status: 'danger',
+            desc: this.$gettext(error_message)
+          })
         }
-
-        this.showMessage({
-          title: this.$gettext('Error importing project from Overleaf'),
-          timeout: 10,
-          status: 'danger',
-          desc: this.$gettext(error_message)
-        })
       }
     }
 
