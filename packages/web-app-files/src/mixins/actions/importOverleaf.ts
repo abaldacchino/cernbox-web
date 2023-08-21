@@ -70,8 +70,7 @@ export default {
 
       const query = stringify({
         path: resource.path,
-        lang: this.$language.current,
-        access_token: accessToken
+        lang: this.$language.current
       })
       const url = `${baseUrl}?${query}`
 
