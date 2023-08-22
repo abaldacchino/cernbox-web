@@ -1,4 +1,5 @@
-import { isLocationTrashActive } from '../../router'
+import { isLocationTrashActive, isLocationSharesActive } from '../../router'
+import { ShareStatus } from 'web-client/src/helpers/share'
 import isFilesAppActive from './helpers/isFilesAppActive'
 import isSearchActive from '../helpers/isSearchActive'
 import { isSameResource } from '../../helpers/resource'
@@ -25,6 +26,13 @@ export default {
             }
 
             if (this.currentFolder !== null && isSameResource(resources[0], this.currentFolder)) {
+              return false
+            }
+
+            if (
+              isLocationSharesActive(this.$router, 'files-shares-with-me') &&
+              resources[0].status === ShareStatus.declined
+            ) {
               return false
             }
 
